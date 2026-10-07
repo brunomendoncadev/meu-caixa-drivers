@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Meu Caixa – Drivers</title>
+<title>Meu Caixa v.5</title>
 <!-- Versão local: sem login, dados só neste navegador. Para ícone na tela inicial, veja manifest/PWA. -->
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;700&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
 <style>
@@ -12,7 +12,7 @@
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font:500 16px/1.4 Barlow,system-ui,sans-serif;max-width:560px;margin:0 auto;padding:16px 14px 40px}
-h1{font:700 30px/1 'Barlow Condensed',Barlow,sans-serif;margin:4px 0 14px; padding-left:2.8em;}
+h1{font:700 30px/1 'Barlow Condensed',Barlow,sans-serif;margin:4px 0 14px}
 h2{font:700 20px/1 'Barlow Condensed',Barlow,sans-serif;margin:0 0 10px}
 section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
 .g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -40,11 +40,10 @@ input:focus,button:focus-visible{outline:3px solid var(--ac);outline-offset:1px}
 .mut{color:var(--mut);font-size:14px}
 .ent{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
 .ent button{border:1px solid var(--line);background:none;color:var(--mut);border-radius:8px;padding:6px 9px;font:inherit;font-size:13px}
-#msg{min-height:20px;font-size:15px;font-weight:700;margin-top:8px}#msg.err{color:var(--neg)}#msg.ok{color:var(--pos)}input.bad{border-color:var(--neg);outline:2px solid var(--neg)}
-.autor { margin-left: 6.5em;}
+#msg{min-height:20px;font-size:15px;font-weight:700;margin-top:8px}input[type=checkbox]{width:auto;margin-right:10px;transform:scale(1.4)}.chk{display:flex;align-items:center;font-size:16px;color:var(--ink);margin-bottom:12px}
+#fmsg{min-height:20px;font-size:15px;font-weight:700;margin-top:8px}.err{color:var(--neg)}.ok{color:var(--pos)}input.bad{border-color:var(--neg);outline:2px solid var(--neg)}
 </style></head><body>
-<h1>Meu Caixa - Drivers</h1>
-<p class="autor">@Brunnomendonca.dev<p>
+<h1>Meu Caixa <small style="font:500 14px Barlow,sans-serif;color:var(--mut)">v.5</small></h1>
 
 <section><h2>Anotar o dia</h2>
 <div class="g">
@@ -57,19 +56,31 @@ input:focus,button:focus-visible{outline:3px solid var(--ac);outline-offset:1px}
 <div class="full mut" id="est"></div>
 <div><label for="u">Ganhos Uber (R$)</label><input id="u" inputmode="decimal" placeholder="0,00"></div>
 <div><label for="n">Ganhos 99 (R$)</label><input id="n" inputmode="decimal" placeholder="0,00"></div>
-
+<div class="full" id="ptw" hidden><label for="pt">Ganhos particular (R$)</label><input id="pt" inputmode="decimal" placeholder="0,00"></div>
 </div>
 <button class="btn" id="add">Salvar dia</button><div id="msg" role="status"></div></section>
 
-<section><h2>Meus ganhos</h2>
+<section><h2>Abastecimento</h2>
+<div class="g">
+<div class="full"><label for="fd">Dia</label><input id="fd" type="date"></div>
+<div><label for="fv">Valor pago (R$)</label><input id="fv" inputmode="decimal" placeholder="0,00"></div>
+<div><label for="fp">Preço por litro (R$)</label><input id="fp" inputmode="decimal" placeholder="0,00"></div>
+<div class="full mut" id="fest"></div>
+</div>
+<button class="btn" id="addf">Salvar abastecimento</button><div id="fmsg" role="status"></div></section>
+
+<section><h2>Meu caixa</h2>
+<div class="tabs" id="vtabs"><button data-v="g" class="on">Ganhos</button><button data-v="c">Gastos</button></div>
 <div class="tabs" id="tabs"><button data-m="day" class="on">Dia</button><button data-m="week">Semana</button><button data-m="month">Mês</button></div>
 <div class="big" id="big"></div><div id="list"></div></section>
 
 <section><h2>Melhores dias da semana</h2><div id="wd"></div></section>
 <section><h2>Melhores horários</h2><div id="hr"></div></section>
-<section><h2>Últimos registros</h2><div id="ents"></div></section>
+<section><h2>Últimos dias trabalhados</h2><div id="ents"></div></section>
+<section><h2>Últimos abastecimentos</h2><div id="fents"></div></section>
 
-<section><h2>Backup</h2><p class="mut">Seus dados ficam só neste navegador. Exporte de vez em quando.</p>
+<section><h2>Configurações e backup</h2>
+<label class="chk"><input type="checkbox" id="usepart"> Usar o campo “Ganhos particular”</label><p class="mut">Seus dados ficam só neste navegador. Exporte de vez em quando.</p>
 <button class="btn" id="exp">Exportar backup</button>
 <label class="btn" style="display:block;text-align:center;font-size:18px;color:var(--acink)">Importar backup<input id="imp" type="file" accept=".json" hidden></label></section>
 
@@ -82,13 +93,14 @@ const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+Stri
 const mon=d=>{const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));return x};
 const mins=t=>{const[h,m]=t.split(':').map(Number);return h*60+m};
 const dur=e=>{let d=mins(e.end)-mins(e.start);if(d<=0)d+=1440;return d};
-const gain=e=>e.uber+e.n99;
+const gain=e=>e.uber+e.n99+(e.part||0);  // dias antigos não têm 'part' -> conta como 0
+const hm=m=>Math.floor(m/60)+'h'+(m%60?String(m%60).padStart(2,'0'):'');  // 510 min -> 8h30
 const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const LS='meucaixa_v1';
-let E=[],mode='day',delId=null,CFG={price:0,media:0};  // E = lista de dias; CFG = preço e média
+let E=[],F=[],mode='day',view='g',delId=null,CFG={price:0,media:0};  // E = lista de dias; CFG = preço e média
 
 // localStorage guarda texto por chave; por isso usamos JSON.stringify (objeto->texto) e JSON.parse (texto->objeto)
-function locSave(){try{localStorage.setItem(LS,JSON.stringify(E));localStorage.setItem(LS+'c',JSON.stringify(CFG))}catch(e){}}
+function locSave(){try{localStorage.setItem(LS,JSON.stringify(E));localStorage.setItem(LS+'c',JSON.stringify(CFG));localStorage.setItem(LS+'f',JSON.stringify(F))}catch(e){}}
 function locLoad(){try{return JSON.parse(localStorage.getItem(LS)||'[]')}catch(e){return[]}}
 // Salvar = gravar a lista (E) e as configurações (CFG) no localStorage
 function save(){locSave()}
@@ -96,6 +108,8 @@ function save(){locSave()}
 function initStore(){
   E=locLoad();
   try{CFG=JSON.parse(localStorage.getItem(LS+'c')||'{}')}catch(e){}
+  try{F=JSON.parse(localStorage.getItem(LS+'f')||'[]')}catch(e){}
+  if(!Array.isArray(F))F=[];
   fillCfg();render();
 }
 
@@ -107,7 +121,7 @@ function label(k){
 }
 function sum(list){return list.reduce((a,e)=>{a.g+=gain(e);a.c+=e.fuel;a.km+=e.km;a.m+=dur(e);return a},{g:0,c:0,km:0,m:0})}
 
-function render(){
+function renderGanhos(){
   const gr={};E.forEach(e=>(gr[key(e)]=gr[key(e)]||[]).push(e));
   const now=key({date:iso(new Date())});
   const cur=sum(gr[now]||[]);
@@ -115,7 +129,24 @@ function render(){
   $('#big').innerHTML=`<div><b>${brl(cur.g)}</b><small>Ganhos</small></div><div><b class="neg">${brl(cur.c)}</b><small>Combustível (estimado)</small></div><div><b class="${lucro>=0?'pos':'neg'}">${brl(lucro)}</b><small>Sobrou</small></div>`;
   const keys=Object.keys(gr).sort().reverse().slice(0,mode==='day'?7:mode==='week'?8:6);
   const tops=keys.map(k=>sum(gr[k]).g),mx=Math.max(1,...tops);
-  $('#list').innerHTML=keys.length?keys.map((k,i)=>{const s=sum(gr[k]);return `<div class="row"><div class="t"><span>${label(k)}</span><span>${brl(s.g)} · sobrou <b class="${s.g-s.c>=0?'pos':'neg'}">${brl(s.g-s.c)}</b></span></div><div class="bar"><i style="width:${tops[i]/mx*100}%"></i></div></div>`}).join(''):'<p class="mut">Anote seu primeiro dia para ver os totais aqui.</p>';
+  $('#list').innerHTML=keys.length?keys.map((k,i)=>{const s=sum(gr[k]);return `<div class="row"><div class="t"><span>${label(k)} <span class="mut">· ${hm(s.m)}</span></span><span>${brl(s.g)} · sobrou <b class="${s.g-s.c>=0?'pos':'neg'}">${brl(s.g-s.c)}</b></span></div><div class="bar"><i style="width:${tops[i]/mx*100}%"></i></div></div>`}).join(''):'<p class="mut">Anote seu primeiro dia para ver os totais aqui.</p>';
+}
+
+// Aba Gastos: abastecido (real) x estimado pelo trabalho (km / média x preço)
+function renderGastos(){
+  const gr={},z=()=>({g:0,est:0,real:0});
+  E.forEach(e=>{const x=gr[key(e)]=gr[key(e)]||z();x.est+=e.fuel;x.g+=gain(e)});
+  F.forEach(f=>{const x=gr[key(f)]=gr[key(f)]||z();x.real+=f.valor});
+  const c=gr[key({date:iso(new Date())})]||z();
+  $('#big').innerHTML=`<div><b>${brl(c.real)}</b><small>Abastecido</small></div><div><b>${brl(c.est)}</b><small>Estimado (trabalho)</small></div><div><b class="${c.real-c.est>0?'neg':'pos'}">${brl(c.real-c.est)}</b><small>Fora do app</small></div>`;
+  const keys=Object.keys(gr).sort().reverse().slice(0,mode==='day'?7:mode==='week'?8:6);
+  const mx=Math.max(1,...keys.map(k=>Math.max(gr[k].real,gr[k].est)));
+  const nota=mode==='day'?'Por dia pode não bater: você nem sempre abastece no mesmo dia em que trabalha.':'';
+  $('#list').innerHTML=(keys.length?keys.map(k=>{const x=gr[k];return `<div class="row"><div class="t"><span>${label(k)}</span><span>Abastecido <b>${brl(x.real)}</b></span></div><div class="bar"><i style="width:${x.real/mx*100}%"></i></div></div>`}).join(''):'<p class="mut">Lance um abastecimento para ver os gastos aqui.</p>')+(nota?`<p class="mut">${nota}</p>`:'');
+}
+
+function render(){
+  view==='c'?renderGastos():renderGanhos();
 
   // melhores dias
   const W=Array.from({length:7},()=>({g:0,m:0}));
@@ -131,9 +162,22 @@ function render(){
   const hr=H.map(h=>h.w?h.s/h.w:0),hm=Math.max(...hr);
   $('#hr').innerHTML=hm?`<div class="hrs">${hr.map(v=>`<div class="${v===hm?'best':''}" style="height:${v/hm*100}%" title="${brl(v)}/hora"></div>`).join('')}</div><div class="lab">${hr.map((_,i)=>`<span>${i%3===0?i+'h':''}</span>`).join('')}</div><p class="mut">Melhor horário: <b>${hr.indexOf(hm)}h</b>, média de ${brl(hm)} por hora.</p>`:'<p class="mut">Os gráficos aparecem depois do primeiro registro.</p>';
 
-  $('#ents').innerHTML=E.length?[...E].sort((a,b)=>b.date.localeCompare(a.date)||b.start.localeCompare(a.start)).slice(0,10).map(e=>`<div class="ent"><span>${pd(e.date).toLocaleDateString('pt-BR')} · ${e.start}–${e.end}<br><span class="mut">${e.km} km · Uber ${brl(e.uber)} · 99 ${brl(e.n99)} · comb. est. ${brl(e.fuel)}</span></span><button data-id="${e.id}">${delId===e.id?'Confirmar?':'Excluir'}</button></div>`).join(''):'<p class="mut">Nenhum registro ainda.</p>';
+  $('#fents').innerHTML=F.length?[...F].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(f=>`<div class="ent"><span>${pd(f.date).toLocaleDateString('pt-BR')} · ${brl(f.valor)}${f.litros?' · '+(+f.litros).toLocaleString('pt-BR',{maximumFractionDigits:1})+' L':''}</span><button data-fid="${f.id}">${delId===f.id?'Confirmar?':'Excluir'}</button></div>`).join(''):'<p class="mut">Nenhum abastecimento ainda.</p>';
+  $('#ents').innerHTML=E.length?[...E].sort((a,b)=>b.date.localeCompare(a.date)||b.start.localeCompare(a.start)).slice(0,10).map(e=>`<div class="ent"><span>${pd(e.date).toLocaleDateString('pt-BR')} · ${e.start}–${e.end}<br><span class="mut">${e.km} km · Uber ${brl(e.uber)} · 99 ${brl(e.n99)}${e.part?' · Part. '+brl(e.part):''} · comb. est. ${brl(e.fuel)}</span></span><button data-id="${e.id}">${delId===e.id?'Confirmar?':'Excluir'}</button></div>`).join(''):'<p class="mut">Nenhum registro ainda.</p>';
 }
 
+$('#vtabs').onclick=ev=>{const v=ev.target.dataset.v;if(!v)return;view=v;document.querySelectorAll('#vtabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render()};
+$('#fents').onclick=ev=>{const id=ev.target.dataset.fid;if(!id)return;if(delId===id){F=F.filter(f=>f.id!==id);delId=null;save()}else delId=id;render()};
+function festim(){const v=num($('#fv').value),p=num($('#fp').value);$('#fest').textContent=v&&p?'Litros estimados: '+(v/p).toLocaleString('pt-BR',{maximumFractionDigits:1})+' L':''}
+['fv','fp'].forEach(i=>$('#'+i).addEventListener('input',festim));
+$('#addf').onclick=()=>{
+  const d=$('#fd').value,v=num($('#fv').value),p=num($('#fp').value),m=$('#fmsg');
+  if(!d||!v||!p){m.className='err';m.textContent='Informe o dia, o valor pago e o preço por litro.';return}
+  F.push({id:Date.now().toString(36),date:d,valor:v,preco:p,litros:v/p});
+  CFG.price=p;fillCfg();est();   // o preço do último abastecimento vira o preço usado na estimativa do dia
+  $('#fv').value='';festim();save();render();
+  m.className='ok';m.textContent='✔ Abastecimento salvo!';setTimeout(()=>m.textContent='',4000);
+};
 $('#tabs').onclick=ev=>{const m=ev.target.dataset.m;if(!m)return;mode=m;document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));render()};
 $('#ents').onclick=ev=>{const id=ev.target.dataset.id;if(!id)return;if(delId===id){E=E.filter(e=>e.id!==id);delId=null;save()}else delId=id;render()};
 function warn(t,ids){const m=$('#msg');m.className='err';m.textContent=t;['d','s','f','km','md','p'].forEach(i=>$('#'+i).classList.remove('bad'));(ids||[]).forEach(i=>$('#'+i).classList.add('bad'));m.scrollIntoView({block:'center',behavior:'smooth'})}
@@ -145,9 +189,9 @@ $('#add').onclick=()=>{
     if(miss.length){warn('Falta preencher: '+miss.map(i=>nm[i]).join(' e ')+'.',miss);return}
     const km=num($('#km').value),md=num($('#md').value),pr=num($('#p').value);
     if(km&&(!md||!pr)){warn('Para estimar o combustível, informe a média do painel (km/l) e o preço do litro.',[!md&&'md',!pr&&'p'].filter(Boolean));return}
-    E.push({id:Date.now().toString(36),date:d,start:s,end:f,km,uber:num($('#u').value),n99:num($('#n').value),fuel:md?km/md*pr:0,media:md,preco:pr});
-    CFG={price:pr,media:md};
-    ['km','u','n'].forEach(i=>$('#'+i).value='');est();
+    E.push({id:Date.now().toString(36),date:d,start:s,end:f,km,uber:num($('#u').value),n99:num($('#n').value),part:CFG.part?num($('#pt').value):0,fuel:md?km/md*pr:0,media:md,preco:pr});
+    CFG.price=pr;CFG.media=md;  // (não recriar o CFG, senão perde a opção 'part')
+    ['km','u','n','pt'].forEach(i=>$('#'+i).value='');est();
     ['d','s','f','km','md','p'].forEach(i=>$('#'+i).classList.remove('bad'));
     save();render();
     const m=$('#msg');m.className='ok';m.textContent='✔ Dia salvo!';
@@ -155,12 +199,14 @@ $('#add').onclick=()=>{
     setTimeout(()=>m.textContent='',4000);
   }catch(e){warn('Erro ao salvar: '+e.message)}
 };
-function fillCfg(){if(CFG.price)$('#p').value=String(CFG.price).replace('.',',');if(CFG.media)$('#md').value=String(CFG.media).replace('.',',')}
+function applyPart(){$('#ptw').hidden=!CFG.part;$('#usepart').checked=!!CFG.part}
+function fillCfg(){if(CFG.price)$('#p').value=$('#fp').value=String(CFG.price).replace('.',',');if(CFG.media)$('#md').value=String(CFG.media).replace('.',',');applyPart()}
 function est(){const k=num($('#km').value),m=num($('#md').value),q=num($('#p').value);$('#est').textContent=k&&m&&q?'Combustível estimado do dia: '+brl(k/m*q):''}
 ['km','md','p'].forEach(i=>$('#'+i).addEventListener('input',est));
-$('#p').addEventListener('change',()=>{CFG.price=num($('#p').value);save()});
-$('#d').value=iso(new Date());
-$('#exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({list:E,cfg:CFG})],{type:'application/json'}));a.download='meu-caixa-backup.json';a.click()};
-$('#imp').onchange=async ev=>{try{const d=JSON.parse(await ev.target.files[0].text());if(!Array.isArray(d.list))throw 0;E=d.list;CFG=d.cfg||CFG;save();fillCfg();render()}catch(e){alert('Arquivo de backup inválido.')}};
+$('#p').addEventListener('change',()=>{CFG.price=num($('#p').value);$('#fp').value=$('#p').value;save()});
+$('#d').value=iso(new Date());$('#fd').value=iso(new Date());
+$('#usepart').onchange=()=>{CFG.part=$('#usepart').checked;save();applyPart()};
+$('#exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({versao:5,list:E,cfg:CFG,fuels:F})],{type:'application/json'}));a.download='meu-caixa-backup-'+iso(new Date())+'.json';a.click()};
+$('#imp').onchange=async ev=>{try{const d=JSON.parse(await ev.target.files[0].text());if(!Array.isArray(d.list))throw 0;E=d.list;CFG=d.cfg||CFG;F=Array.isArray(d.fuels)?d.fuels:F;save();fillCfg();render()}catch(e){alert('Arquivo de backup inválido.')}};
 initStore();
 </script></body></html>
