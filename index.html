@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Meu Caixa v.5</title>
+<title>Meu Caixa v.7</title>
 <!-- Versão local: sem login, dados só neste navegador. Para ícone na tela inicial, veja manifest/PWA. -->
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;700&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
 <style>
@@ -41,9 +41,10 @@ input:focus,button:focus-visible{outline:3px solid var(--ac);outline-offset:1px}
 .ent{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
 .ent button{border:1px solid var(--line);background:none;color:var(--mut);border-radius:8px;padding:6px 9px;font:inherit;font-size:13px}
 #msg{min-height:20px;font-size:15px;font-weight:700;margin-top:8px}input[type=checkbox]{width:auto;margin-right:10px;transform:scale(1.4)}.chk{display:flex;align-items:center;font-size:16px;color:var(--ink);margin-bottom:12px}
-#fmsg{min-height:20px;font-size:15px;font-weight:700;margin-top:8px}.err{color:var(--neg)}.ok{color:var(--pos)}input.bad{border-color:var(--neg);outline:2px solid var(--neg)}
+.wk{display:flex;align-items:center;justify-content:space-between;margin-top:12px}.nav{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;width:46px;height:40px;font-size:22px}
+#omsg,#fmsg{min-height:20px;font-size:15px;font-weight:700;margin-top:8px}.err{color:var(--neg)}.ok{color:var(--pos)}input.bad{border-color:var(--neg);outline:2px solid var(--neg)}
 </style></head><body>
-<h1>Meu Caixa <small style="font:500 14px Barlow,sans-serif;color:var(--mut)">v.5</small></h1>
+<h1>Meu Caixa <small style="font:500 14px Barlow,sans-serif;color:var(--mut)">v.7</small></h1>
 
 <section><h2>Anotar o dia</h2>
 <div class="g">
@@ -69,8 +70,18 @@ input:focus,button:focus-visible{outline:3px solid var(--ac);outline-offset:1px}
 </div>
 <button class="btn" id="addf">Salvar abastecimento</button><div id="fmsg" role="status"></div></section>
 
+<section id="osec" hidden><h2>Semana do carro alugado</h2>
+<div class="g">
+<div class="full"><label for="wini">Km inicial da semana</label><input id="wini" inputmode="numeric" placeholder="0"></div>
+<div class="full"><label for="wfim">Km final da semana</label><input id="wfim" inputmode="numeric" placeholder="0"></div>
+<div><label for="wrent">Aluguel da semana (R$)</label><input id="wrent" inputmode="decimal" placeholder="0,00"></div>
+<div><label for="wlim">Limite de km da semana</label><input id="wlim" inputmode="numeric" placeholder="0"></div>
+</div>
+<div class="wk"><button class="nav" id="wprev" aria-label="Semana anterior">‹</button><span class="mut" id="wlabel"></span><button class="nav" id="wnext" aria-label="Próxima semana">›</button></div>
+<button class="btn" id="addw">Salvar semana</button><div id="omsg" role="status"></div></section>
+
 <section><h2>Meu caixa</h2>
-<div class="tabs" id="vtabs"><button data-v="g" class="on">Ganhos</button><button data-v="c">Gastos</button></div>
+<div class="tabs" id="vtabs"><button data-v="g" class="on">Ganhos</button><button data-v="c">Gastos</button><button data-v="k">Km</button></div>
 <div class="tabs" id="tabs"><button data-m="day" class="on">Dia</button><button data-m="week">Semana</button><button data-m="month">Mês</button></div>
 <div class="big" id="big"></div><div id="list"></div></section>
 
@@ -80,7 +91,9 @@ input:focus,button:focus-visible{outline:3px solid var(--ac);outline-offset:1px}
 <section><h2>Últimos abastecimentos</h2><div id="fents"></div></section>
 
 <section><h2>Configurações e backup</h2>
-<label class="chk"><input type="checkbox" id="usepart"> Usar o campo “Ganhos particular”</label><p class="mut">Seus dados ficam só neste navegador. Exporte de vez em quando.</p>
+<label class="chk"><input type="checkbox" id="usepart"> Usar o campo “Ganhos particular”</label>
+<label class="chk"><input type="checkbox" id="rentcb"> Uso carro alugado</label>
+<p class="mut">Seus dados ficam só neste navegador. Exporte de vez em quando.</p>
 <button class="btn" id="exp">Exportar backup</button>
 <label class="btn" style="display:block;text-align:center;font-size:18px;color:var(--acink)">Importar backup<input id="imp" type="file" accept=".json" hidden></label></section>
 
@@ -94,13 +107,14 @@ const mon=d=>{const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));retu
 const mins=t=>{const[h,m]=t.split(':').map(Number);return h*60+m};
 const dur=e=>{let d=mins(e.end)-mins(e.start);if(d<=0)d+=1440;return d};
 const gain=e=>e.uber+e.n99+(e.part||0);  // dias antigos não têm 'part' -> conta como 0
+const ni=v=>parseInt(String(v).split(',')[0].replace(/\D/g,''))||0;  // só dígitos (1.250 ou 1250)
 const hm=m=>Math.floor(m/60)+'h'+(m%60?String(m%60).padStart(2,'0'):'');  // 510 min -> 8h30
 const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const LS='meucaixa_v1';
-let E=[],F=[],mode='day',view='g',delId=null,CFG={price:0,media:0};  // E = lista de dias; CFG = preço e média
+let E=[],F=[],O=[],W={},AW=null,mode='day',view='g',delId=null,CFG={price:0,media:0};  // E = lista de dias; CFG = preço e média
 
 // localStorage guarda texto por chave; por isso usamos JSON.stringify (objeto->texto) e JSON.parse (texto->objeto)
-function locSave(){try{localStorage.setItem(LS,JSON.stringify(E));localStorage.setItem(LS+'c',JSON.stringify(CFG));localStorage.setItem(LS+'f',JSON.stringify(F))}catch(e){}}
+function locSave(){try{localStorage.setItem(LS,JSON.stringify(E));localStorage.setItem(LS+'c',JSON.stringify(CFG));localStorage.setItem(LS+'f',JSON.stringify(F));localStorage.setItem(LS+'w',JSON.stringify(W))}catch(e){}}
 function locLoad(){try{return JSON.parse(localStorage.getItem(LS)||'[]')}catch(e){return[]}}
 // Salvar = gravar a lista (E) e as configurações (CFG) no localStorage
 function save(){locSave()}
@@ -110,6 +124,9 @@ function initStore(){
   try{CFG=JSON.parse(localStorage.getItem(LS+'c')||'{}')}catch(e){}
   try{F=JSON.parse(localStorage.getItem(LS+'f')||'[]')}catch(e){}
   if(!Array.isArray(F))F=[];
+  try{W=JSON.parse(localStorage.getItem(LS+'w')||'{}')}catch(e){}
+  try{O=JSON.parse(localStorage.getItem(LS+'o')||'[]')}catch(e){}
+  migrateOdo();
   fillCfg();render();
 }
 
@@ -121,15 +138,66 @@ function label(k){
 }
 function sum(list){return list.reduce((a,e)=>{a.g+=gain(e);a.c+=e.fuel;a.km+=e.km;a.m+=dur(e);return a},{g:0,c:0,km:0,m:0})}
 
+// Cada SEMANA (segunda a domingo) guarda os próprios valores: W['2026-10-05'] = {ini, fim, rent, lim}
+// Assim um reajuste do aluguel ou do limite nunca altera semanas passadas.
+const wm=k=>{const t=pd(k);t.setDate(t.getDate()+1);return iso(t).slice(0,7)};  // mês da terça-feira da semana
+const addDays=(k,n)=>{const d=pd(k);d.setDate(d.getDate()+n);return iso(d)};
+const wd=k=>String(pd(k).getDate()).padStart(2,'0')+'/'+String(pd(k).getMonth()+1).padStart(2,'0');
+const curWeek=()=>iso(mon(new Date()));
+function rentOf(k){   // aluguel só entra na semana e no mês (nunca no dia)
+  if(!CFG.rentOn||mode==='day')return 0;
+  if(mode==='week')return (W[k]&&W[k].rent)||0;
+  return Object.keys(W).filter(m=>wm(m)===k).reduce((a,m)=>a+(W[m].rent||0),0);
+}
+function kmTotal(k){  // km rodados pelo carro (só semanas já fechadas)
+  const f=m=>W[m]&&W[m].ini&&W[m].fim?W[m].fim-W[m].ini:null;
+  if(mode==='week')return f(k);
+  if(mode==='day')return null;
+  const l=Object.keys(W).filter(m=>wm(m)===k&&f(m)!=null);
+  return l.length?l.reduce((a,m)=>a+f(m),0):null;
+}
+const limOf=k=>(mode==='week'&&W[k]&&W[k].lim)||0;
+// v.6 guardava o km solto e o aluguel/limite nas configurações. Converte para semanas.
+function migrateOdo(){
+  if(!(O.length||CFG.rent||CFG.kmlim)){O=[];return}
+  const by={};O.forEach(o=>{const k=iso(mon(pd(o.date)));(by[k]=by[k]||[]).push(o.km)});
+  if(!Object.keys(by).length)by[curWeek()]=[];
+  Object.keys(by).forEach(k=>{const r=by[k],w=W[k]=W[k]||{};
+    if(r.length&&!w.ini)w.ini=Math.min(...r);
+    if(r.length>1&&!w.fim)w.fim=Math.max(...r);
+    if(CFG.rent&&!w.rent)w.rent=CFG.rent;
+    if(CFG.kmlim&&!w.lim)w.lim=CFG.kmlim});
+  O=[];delete CFG.rent;delete CFG.kmlim;
+  try{localStorage.removeItem(LS+'o')}catch(e){}
+  locSave();
+}
+function pickWeek(){  // semana aberta (só km inicial) > semana seguinte à última fechada > semana atual
+  const ks=Object.keys(W).sort(),open=ks.filter(k=>W[k].ini&&!W[k].fim).pop();
+  if(open)return open;
+  const done=ks.filter(k=>W[k].fim).pop(),cur=curWeek();
+  if(!done)return cur;
+  const nx=addDays(done,7);return nx>cur?nx:cur;
+}
+const lastOf=(k,f)=>{const p=Object.keys(W).sort().filter(x=>x<k&&W[x][f]).pop();return p?W[p][f]:0};
+function loadWeek(){
+  if(!AW)AW=pickWeek();
+  const w=W[AW]||{},v=x=>x?String(x).replace('.',','):'';
+  $('#wini').value=v(w.ini);$('#wfim').value=v(w.fim);$('#wrent').value=v(w.rent);$('#wlim').value=v(w.lim);
+  const ph=(i,x)=>{$(i).placeholder=x?v(x):'0'};   // dica: valor da semana anterior
+  ph('#wini',lastOf(AW,'fim'));ph('#wrent',lastOf(AW,'rent'));ph('#wlim',lastOf(AW,'lim'));
+  $('#wlabel').textContent='Semana de '+wd(AW)+' a '+wd(addDays(AW,6))+(AW===curWeek()?' · atual':'');
+}
+
 function renderGanhos(){
   const gr={};E.forEach(e=>(gr[key(e)]=gr[key(e)]||[]).push(e));
   const now=key({date:iso(new Date())});
   const cur=sum(gr[now]||[]);
-  const lucro=cur.g-cur.c;
+  const lucro=cur.g-cur.c-rentOf(now);
   $('#big').innerHTML=`<div><b>${brl(cur.g)}</b><small>Ganhos</small></div><div><b class="neg">${brl(cur.c)}</b><small>Combustível (estimado)</small></div><div><b class="${lucro>=0?'pos':'neg'}">${brl(lucro)}</b><small>Sobrou</small></div>`;
   const keys=Object.keys(gr).sort().reverse().slice(0,mode==='day'?7:mode==='week'?8:6);
   const tops=keys.map(k=>sum(gr[k]).g),mx=Math.max(1,...tops);
-  $('#list').innerHTML=keys.length?keys.map((k,i)=>{const s=sum(gr[k]);return `<div class="row"><div class="t"><span>${label(k)} <span class="mut">· ${hm(s.m)}</span></span><span>${brl(s.g)} · sobrou <b class="${s.g-s.c>=0?'pos':'neg'}">${brl(s.g-s.c)}</b></span></div><div class="bar"><i style="width:${tops[i]/mx*100}%"></i></div></div>`}).join(''):'<p class="mut">Anote seu primeiro dia para ver os totais aqui.</p>';
+  $('#list').innerHTML=keys.length?keys.map((k,i)=>{const s=sum(gr[k]),sb=s.g-s.c-rentOf(k);return `<div class="row"><div class="t"><span>${label(k)} <span class="mut">· ${hm(s.m)}</span></span><span>${brl(s.g)} · sobrou <b class="${sb>=0?'pos':'neg'}">${brl(sb)}</b></span></div><div class="bar"><i style="width:${tops[i]/mx*100}%"></i></div></div>`}).join(''):'<p class="mut">Anote seu primeiro dia para ver os totais aqui.</p>';
+  if(rentOf(now))$('#list').innerHTML='<p class="mut">Já descontado: aluguel de '+brl(rentOf(now))+'.</p>'+$('#list').innerHTML;
 }
 
 // Aba Gastos: abastecido (real) x estimado pelo trabalho (km / média x preço)
@@ -142,11 +210,26 @@ function renderGastos(){
   const keys=Object.keys(gr).sort().reverse().slice(0,mode==='day'?7:mode==='week'?8:6);
   const mx=Math.max(1,...keys.map(k=>Math.max(gr[k].real,gr[k].est)));
   const nota=mode==='day'?'Por dia pode não bater: você nem sempre abastece no mesmo dia em que trabalha.':'';
-  $('#list').innerHTML=(keys.length?keys.map(k=>{const x=gr[k];return `<div class="row"><div class="t"><span>${label(k)}</span><span>Abastecido <b>${brl(x.real)}</b></span></div><div class="bar"><i style="width:${x.real/mx*100}%"></i></div></div>`}).join(''):'<p class="mut">Lance um abastecimento para ver os gastos aqui.</p>')+(nota?`<p class="mut">${nota}</p>`:'');
+  $('#list').innerHTML=(keys.length?keys.map(k=>{const x=gr[k];return `<div class="row"><div class="t"><span>${label(k)}</span><span>Abastecido <b>${brl(x.real)}</b>${rentOf(k)?' · Aluguel <b>'+brl(rentOf(k))+'</b>':''}</span></div><div class="bar"><i style="width:${x.real/mx*100}%"></i></div></div>`}).join(''):'<p class="mut">Lance um abastecimento para ver os gastos aqui.</p>')+(nota?`<p class="mut">${nota}</p>`:'');
+}
+
+function renderKm(){
+  const gr={},n=v=>Math.round(v).toLocaleString('pt-BR')+' km';
+  E.forEach(e=>{const x=gr[key(e)]=gr[key(e)]||{w:0};x.w+=e.km});
+  const rent=CFG.rentOn&&mode!=='day';
+  if(rent)Object.keys(W).forEach(m=>{const k=mode==='week'?m:wm(m);gr[k]=gr[k]||{w:0}});
+  const tot=k=>rent?kmTotal(k):null;
+  const nk=key({date:iso(new Date())}),c=gr[nk]||{w:0},t=tot(nk),lm=limOf(nk);
+  $('#big').innerHTML=`<div><b>${n(c.w)}</b><small>Trabalho</small></div>`+(rent?`<div><b>${t==null?'–':n(t)}</b><small>Total do carro</small></div><div><b>${t==null?'–':n(t-c.w)}</b><small>Particular</small></div>`:'');
+  const keys=Object.keys(gr).sort().reverse().slice(0,mode==='day'?7:mode==='week'?8:6);
+  const mx=Math.max(1,...keys.map(k=>Math.max(gr[k].w,tot(k)||0)));
+  let lim='';
+  if(rent&&mode==='week'&&lm&&t!=null)lim=t<=lm?`<p class="mut">Limite da semana: restam <b>${n(lm-t)}</b> de ${n(lm)}.</p>`:`<p class="neg" style="font-size:14px">Limite da semana: passou <b>${n(t-lm)}</b> de ${n(lm)}.</p>`;
+  $('#list').innerHTML=lim+(keys.length?keys.map(k=>{const x=gr[k],tk=tot(k);return `<div class="row"><div class="t"><span>${label(k)}</span><span>Trabalho <b>${n(x.w)}</b></span></div><div class="bar"><i style="width:${x.w/mx*100}%"></i></div>${tk!=null?`<div class="mut">Carro ${n(tk)} · particular ${n(tk-x.w)}</div>`:''}</div>`}).join(''):'<p class="mut">Anote um dia com km para ver aqui.</p>');
 }
 
 function render(){
-  view==='c'?renderGastos():renderGanhos();
+  view==='c'?renderGastos():view==='k'?renderKm():renderGanhos();
 
   // melhores dias
   const W=Array.from({length:7},()=>({g:0,m:0}));
@@ -199,14 +282,35 @@ $('#add').onclick=()=>{
     setTimeout(()=>m.textContent='',4000);
   }catch(e){warn('Erro ao salvar: '+e.message)}
 };
-function applyPart(){$('#ptw').hidden=!CFG.part;$('#usepart').checked=!!CFG.part}
+function applyPart(){
+  $('#ptw').hidden=!CFG.part;$('#usepart').checked=!!CFG.part;
+  $('#rentcb').checked=!!CFG.rentOn;$('#osec').hidden=!CFG.rentOn;
+  loadWeek();
+}
 function fillCfg(){if(CFG.price)$('#p').value=$('#fp').value=String(CFG.price).replace('.',',');if(CFG.media)$('#md').value=String(CFG.media).replace('.',',');applyPart()}
 function est(){const k=num($('#km').value),m=num($('#md').value),q=num($('#p').value);$('#est').textContent=k&&m&&q?'Combustível estimado do dia: '+brl(k/m*q):''}
 ['km','md','p'].forEach(i=>$('#'+i).addEventListener('input',est));
 $('#p').addEventListener('change',()=>{CFG.price=num($('#p').value);$('#fp').value=$('#p').value;save()});
 $('#d').value=iso(new Date());$('#fd').value=iso(new Date());
+$('#rentcb').onchange=()=>{CFG.rentOn=$('#rentcb').checked;save();applyPart();render()};
+$('#wprev').onclick=()=>{AW=addDays(AW,-7);loadWeek()};
+$('#wnext').onclick=()=>{AW=addDays(AW,7);loadWeek()};
+$('#addw').onclick=()=>{
+  const m=$('#omsg'),ini=ni($('#wini').value),fim=ni($('#wfim').value),rent=num($('#wrent').value),lim=ni($('#wlim').value);
+  const bad=t=>{m.className='err';m.textContent=t};
+  if(fim&&!ini)return bad('Informe também o km inicial da semana.');
+  if(fim&&fim<=ini)return bad('O km final precisa ser maior que o km inicial.');
+  const w={};if(ini)w.ini=ini;if(fim)w.fim=fim;if(rent)w.rent=rent;if(lim)w.lim=lim;
+  const empty=!Object.keys(w).length;
+  if(empty)delete W[AW];else W[AW]=w;
+  const closed=!!fim;
+  if(closed)AW=addDays(AW,7);   // fechou a semana: passa para a próxima, com os campos limpos
+  save();loadWeek();render();
+  m.className='ok';m.textContent=empty?'Semana limpa.':closed?'✔ Semana fechada! Agora: semana de '+wd(AW)+'.':'✔ Semana salva!';
+  setTimeout(()=>m.textContent='',5000);
+};
 $('#usepart').onchange=()=>{CFG.part=$('#usepart').checked;save();applyPart()};
-$('#exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({versao:5,list:E,cfg:CFG,fuels:F})],{type:'application/json'}));a.download='meu-caixa-backup-'+iso(new Date())+'.json';a.click()};
-$('#imp').onchange=async ev=>{try{const d=JSON.parse(await ev.target.files[0].text());if(!Array.isArray(d.list))throw 0;E=d.list;CFG=d.cfg||CFG;F=Array.isArray(d.fuels)?d.fuels:F;save();fillCfg();render()}catch(e){alert('Arquivo de backup inválido.')}};
+$('#exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({versao:7,list:E,cfg:CFG,fuels:F,weeks:W})],{type:'application/json'}));a.download='meu-caixa-backup-'+iso(new Date())+'.json';a.click()};
+$('#imp').onchange=async ev=>{try{const d=JSON.parse(await ev.target.files[0].text());if(!Array.isArray(d.list))throw 0;E=d.list;CFG=d.cfg||CFG;F=Array.isArray(d.fuels)?d.fuels:F;O=Array.isArray(d.odo)?d.odo:O;if(d.weeks&&typeof d.weeks==='object')W=d.weeks;AW=null;migrateOdo();save();fillCfg();render()}catch(e){alert('Arquivo de backup inválido.')}};
 initStore();
 </script></body></html>
